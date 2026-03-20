@@ -1,0 +1,42 @@
+# Dependencies
+node_modules/
+
+# Frontend build
+frontend/build/
+
+# Python
+backend/.venv/
+backend/venv/
+__pycache__/
+*.py[cod]
+*$py.class
+.Python
+*.egg-info/
+.eggs/
+dist/
+
+# Local env and data (never commit secrets or live DB)
+backend/.env
+*.db
+*.sqlite
+*.sqlite3
+
+# OS / editor
+.DS_Store
+Thumbs.db
+*.swp
+.idea/
+.vscode/
+
+# Logs and coverage
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+coverage/
+frontend/coverage/
+
+# CRA env (secrets)
+frontend/.env.local
+frontend/.env.development.local
+frontend/.env.test.local
+frontend/.env.production.local
