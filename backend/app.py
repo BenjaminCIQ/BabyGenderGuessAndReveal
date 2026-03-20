@@ -8,6 +8,7 @@ import sqlite3
 import json
 import os
 import uuid
+from datetime import datetime, timezone
 
 load_dotenv()
 
@@ -50,7 +51,14 @@ DEFAULT_CONFIG = {
     'header_start': '#89CFF0',
     'header_end': '#FFB6C1',
     'hero_image_url': '',
+    'scheduled_reveal_at': '',
+    'scheduled_reveal_heading': 'Reveal countdown',
+    'scheduled_reveal_auto': False,
+    'scheduled_reveal_gender': '',
 }
+
+# Never expose the scheduled gender via public /api/config (would leak the answer).
+PUBLIC_CONFIG_STRIP_KEYS = frozenset({'scheduled_reveal_gender'})
 
 
 def get_db():
@@ -166,6 +174,8 @@ def require_site_unlock():
 def public_config_dict():
     merged = load_merged_config()
     out = {k: merged.get(k, v) for k, v in DEFAULT_CONFIG.items()}
+    for k in PUBLIC_CONFIG_STRIP_KEYS:
+        out.pop(k, None)
     gated = bool(_site_password_hash())
     out['site_gated'] = gated
     out['site_unlocked'] = site_cookie_unlocked() if gated else True
@@ -177,6 +187,48 @@ def admin_config_response(merged):
     out = {k: merged.get(k, v) for k, v in DEFAULT_CONFIG.items()}
     out['site_password_set'] = bool(merged.get('site_password_hash'))
     return out
+
+
+def _parse_iso_utc(s):
+    s = (s or '').strip()
+    if not s:
+        return None
+    try:
+        if s.endswith('Z'):
+            s = s[:-1] + '+00:00'
+        dt = datetime.fromisoformat(s)
+        if dt.tzinfo is None:
+            dt = dt.replace(tzinfo=timezone.utc)
+        return dt.astimezone(timezone.utc)
+    except ValueError:
+        return None
+
+
+def maybe_auto_reveal(db):
+    """If auto-reveal is enabled and scheduled time has passed, reveal and persist."""
+    merged = load_merged_config()
+    if not merged.get('scheduled_reveal_auto'):
+        return
+    gender = (merged.get('scheduled_reveal_gender') or '').strip().lower()
+    if gender not in ('boy', 'girl'):
+        return
+    at = _parse_iso_utc(merged.get('scheduled_reveal_at') or '')
+    if not at:
+        return
+    now = datetime.now(timezone.utc)
+    if now < at:
+        return
+    cursor = db.cursor()
+    cursor.execute('SELECT revealed FROM reveal WHERE id = 1')
+    row = cursor.fetchone()
+    if row and row['revealed']:
+        return
+    cursor.execute('SELECT * FROM reveal WHERE id = 1')
+    if cursor.fetchone():
+        cursor.execute('UPDATE reveal SET revealed = 1, actual_gender = ? WHERE id = 1', (gender,))
+    else:
+        cursor.execute('INSERT INTO reveal (id, revealed, actual_gender) VALUES (1, 1, ?)', (gender,))
+    db.commit()
 
 
 def get_provided_admin_key():
@@ -225,6 +277,15 @@ def site_unlock():
         path='/',
     )
     return resp
+
+
+@app.route('/api/admin/config', methods=['GET'])
+def admin_get_config():
+    err = require_admin_key(get_provided_admin_key())
+    if err:
+        return err
+    merged = load_merged_config()
+    return jsonify(admin_config_response(merged))
 
 
 @app.route('/api/admin/config', methods=['PUT'])
@@ -309,6 +370,7 @@ def submit_vote():
     existing_vote = False
 
     db = get_db()
+    maybe_auto_reveal(db)
 
     if not voter_id:
         voter_id = str(uuid.uuid4())
@@ -389,7 +451,15 @@ def get_results():
     if gate:
         return gate
     db = get_db()
-    return jsonify(_party_status_from_db(db))
+    maybe_auto_reveal(db)
+    results = _party_status_from_db(db)
+    merged = load_merged_config()
+    results['scheduled_reveal_at'] = (merged.get('scheduled_reveal_at') or '').strip()
+    results['scheduled_reveal_heading'] = merged.get('scheduled_reveal_heading') or DEFAULT_CONFIG[
+        'scheduled_reveal_heading'
+    ]
+    results['scheduled_reveal_auto'] = bool(merged.get('scheduled_reveal_auto'))
+    return jsonify(results)
 
 
 @app.route('/api/admin/party-status', methods=['GET'])

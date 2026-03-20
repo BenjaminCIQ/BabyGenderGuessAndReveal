@@ -8,8 +8,55 @@ import {
   buildResultsJson,
   downloadBlob,
 } from '../utils/resultsExport';
+import { formatCountdownMs } from '../utils/countdown';
 
 const API_BASE = process.env.REACT_APP_API_BASE || '/api';
+
+function RevealCountdownBlock({ iso, heading, primary, autoReveal }) {
+  const target = useMemo(() => {
+    if (!iso || typeof iso !== 'string') return null;
+    const d = new Date(iso.trim());
+    return Number.isNaN(d.getTime()) ? null : d;
+  }, [iso]);
+  const [now, setNow] = useState(() => Date.now());
+
+  useEffect(() => {
+    if (!target) return undefined;
+    if (target.getTime() <= Date.now()) return undefined;
+    const id = setInterval(() => setNow(Date.now()), 1000);
+    return () => clearInterval(id);
+  }, [target]);
+
+  if (!target) return null;
+
+  const left = target.getTime() - now;
+  if (left <= 0) {
+    return (
+      <div className="reveal-countdown reveal-countdown--passed" style={{ borderColor: `${primary}99` }}>
+        <p className="reveal-countdown-msg">
+          The scheduled reveal time has passed. The big reveal will appear here when the host triggers it.
+        </p>
+      </div>
+    );
+  }
+
+  return (
+    <div className="reveal-countdown" style={{ borderColor: primary }}>
+      <h3 className="reveal-countdown-heading">{heading}</h3>
+      {autoReveal ? (
+        <p className="reveal-countdown-auto-hint">
+          The reveal will happen automatically when the countdown ends.
+        </p>
+      ) : null}
+      <p className="reveal-countdown-local">
+        {target.toLocaleString(undefined, { dateStyle: 'long', timeStyle: 'short' })}
+      </p>
+      <p className="reveal-countdown-digits" aria-live="polite">
+        {formatCountdownMs(left)}
+      </p>
+    </div>
+  );
+}
 
 function ResultsPage() {
   const { config } = usePublicConfig();
@@ -206,6 +253,13 @@ function ResultsPage() {
       ) : (
         <div className="live-results">
           <h2>{c.live_results_heading || 'Live Voting Results'}</h2>
+
+          <RevealCountdownBlock
+            iso={results.scheduled_reveal_at}
+            heading={results.scheduled_reveal_heading || c.scheduled_reveal_heading || 'Reveal countdown'}
+            primary={primary}
+            autoReveal={!!results.scheduled_reveal_auto}
+          />
 
           <div className="chart-container">
             <PieChart width={400} height={400}>

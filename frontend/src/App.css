@@ -175,6 +175,56 @@ body {
     color: #777;
     margin-top: 30px;
   }
+
+  .reveal-countdown {
+    margin: 1rem auto 1.5rem;
+    max-width: 420px;
+    padding: 1.25rem;
+    border: 2px solid;
+    border-radius: 12px;
+    background: linear-gradient(180deg, #ffffff 0%, #f8fafc 100%);
+    text-align: center;
+  }
+
+  .reveal-countdown--passed {
+    border-style: dashed;
+    background: #fafafa;
+  }
+
+  .reveal-countdown-heading {
+    margin: 0 0 0.5rem;
+    font-size: 1.15rem;
+    color: #333;
+  }
+
+  .reveal-countdown-auto-hint {
+    margin: 0 0 0.65rem;
+    font-size: 0.88rem;
+    color: #2e7d32;
+    font-weight: 600;
+  }
+
+  .reveal-countdown-local {
+    margin: 0 0 0.75rem;
+    font-size: 0.95rem;
+    color: #555;
+  }
+
+  .reveal-countdown-digits {
+    margin: 0;
+    font-size: 1.75rem;
+    font-weight: bold;
+    font-variant-numeric: tabular-nums;
+    letter-spacing: 0.03em;
+    color: #222;
+  }
+
+  .reveal-countdown-msg {
+    margin: 0;
+    font-size: 0.95rem;
+    line-height: 1.45;
+    color: #555;
+  }
   
   .big-reveal {
     padding: 40px;
@@ -501,6 +551,39 @@ body {
 
   .admin-key-row {
     margin-top: 1.5rem;
+  }
+
+  .admin-schedule-actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+    align-items: center;
+    margin-top: 0.5rem;
+  }
+
+  .admin-schedule-actions .reset-btn {
+    margin-top: 0;
+    margin-left: 0;
+  }
+
+  .admin-divider {
+    margin: 1.75rem 0;
+    border: none;
+    border-top: 1px dashed #ccc;
+  }
+
+  .admin-checkbox-row label {
+    font-weight: normal;
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+  }
+
+  .admin-label {
+    display: block;
+    font-weight: bold;
+    margin-bottom: 6px;
   }
 
   .admin-tabs {

@@ -15,7 +15,7 @@
 ## Features
 
 - **Vote** (`/`) — Guest page: optional name, boy/girl guess. Custom copy, colours, and hero photo come from the setup screen.
-- **Results** (`/results`) — Live chart before reveal; after reveal, big announcement + correct/incorrect name lists. Guests can **save a PNG** of the reveal card and download **JSON** or **CSV** summaries.
+- **Results** (`/results`) — Live chart before reveal; optional **scheduled reveal countdown** (set in setup). You can enable **auto-reveal** so the server applies the gender at the scheduled time (no manual “Reveal” click). The server checks the schedule when **results are polled** or **someone votes**—keep the results page open or expect traffic near go-time. After reveal, big announcement + correct/incorrect name lists. Guests can **save a PNG** of the reveal card and download **JSON** or **CSV** summaries.
 - **Setup** (`/setup/<slug>`) — Host-only hub (see below): text, colours, photo upload, optional **guest password** for `/` and `/results`, reveal, reset, view/delete votes. **`ADMIN_KEY`** required for every action that changes data.
 - **Guest password** (optional) — If enabled in **Guest access**, visitors hitting `/` or `/results` see a password screen first. The **`/setup/...`** URL is **not** gated so hosts can always configure the party. Password is stored hashed; set **`SECRET_KEY`** in `backend/.env` so guest session cookies are signed consistently (especially in production).
 
@@ -91,7 +91,7 @@ Visit [http://localhost:5000](http://localhost:5000). Open the setup screen at `
 ## Security notes for a public repo
 
 - **Change `ADMIN_KEY`** and **choose a non-default `REACT_APP_ADMIN_SETUP_PATH`** before any real deployment; never commit `backend/.env` or `frontend/.env`.
-- **Admin APIs** (`/api/admin/*`) require `ADMIN_KEY` via `X-Admin-Key` or JSON `admin_key` where applicable. `GET /api/admin/party-status` returns vote/reveal counts without the guest-password gate (for the setup screen).
+- **Admin APIs** (`/api/admin/*`) require `ADMIN_KEY` via `X-Admin-Key` or JSON `admin_key` where applicable. `GET /api/admin/party-status` returns vote/reveal counts without the guest-password gate (for the setup screen). `GET /api/admin/config` returns the full config (including auto-reveal gender); **`scheduled_reveal_gender` is never included in public `GET /api/config`** so guests cannot scrape the answer.
 - **Guest password** is party-level (shared with everyone who should vote); it is not as strong as real auth — use **`ADMIN_KEY`**, **`SECRET_KEY`**, HTTPS, and a hard-to-guess setup slug for real protection.
 - The setup **slug** is not a cryptographic secret; it only obscures the admin UI.
 - Vote identity uses cookies; treat this as a fun party tool, not a high-assurance ballot.

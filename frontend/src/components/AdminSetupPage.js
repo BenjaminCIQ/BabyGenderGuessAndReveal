@@ -3,6 +3,7 @@ import { useParams, Navigate, Link } from 'react-router-dom';
 import axios from 'axios';
 import SetupPreview from './SetupPreview';
 import { SETUP_DEFAULTS, setupValue } from '../setupDefaults';
+import { isoToDatetimeLocal, datetimeLocalToIso } from '../utils/countdown';
 
 const API_BASE = process.env.REACT_APP_API_BASE || '/api';
 const EXPECTED_SLUG = process.env.REACT_APP_ADMIN_SETUP_PATH || 'dev';
@@ -106,6 +107,29 @@ export default function AdminSetupPage() {
     };
   }, [adminKey]);
 
+  useEffect(() => {
+    const key = adminKey.trim();
+    if (!key) return undefined;
+    const t = setTimeout(() => {
+      axios
+        .get(`${API_BASE}/admin/config`, { headers: adminHeaders(key) })
+        .then((r) => {
+          const d = r.data;
+          setDraft((prev) =>
+            prev
+              ? {
+                  ...prev,
+                  scheduled_reveal_gender: d.scheduled_reveal_gender ?? '',
+                  scheduled_reveal_auto: !!d.scheduled_reveal_auto,
+                }
+              : prev,
+          );
+        })
+        .catch(() => {});
+    }, 500);
+    return () => clearTimeout(t);
+  }, [adminKey]);
+
   const setField = (key, value) => {
     setDraft((d) => ({ ...d, [key]: value }));
   };
@@ -139,18 +163,69 @@ export default function AdminSetupPage() {
       showAdminKeyToast('Enter your admin key to save.');
       return;
     }
+    if (draft?.scheduled_reveal_auto) {
+      if (!draft.scheduled_reveal_at?.trim()) {
+        showAdminKeyToast('Set a date and time for auto-reveal, or turn off auto-reveal.');
+        return;
+      }
+      const g = (draft.scheduled_reveal_gender || '').trim();
+      if (g !== 'boy' && g !== 'girl') {
+        showAdminKeyToast('Choose boy or girl for auto-reveal.');
+        return;
+      }
+    }
     setError('');
     setMessage('');
     setLoading(true);
     try {
-      await axios.put(`${API_BASE}/admin/config`, draft, {
+      const res = await axios.put(`${API_BASE}/admin/config`, draft, {
         headers: adminHeaders(adminKey.trim()),
       });
+      if (res.data && typeof res.data === 'object') {
+        setDraft((d) => ({ ...d, ...res.data }));
+      }
       setMessage('Saved.');
     } catch (err) {
       if (err.response?.status === 401) showAdminKeyToast('Invalid admin key.');
       else if (err.response?.status === 503) setError('Set ADMIN_KEY in backend/.env');
       else setError('Save failed.');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const clearScheduledReveal = async () => {
+    if (!adminKey.trim()) {
+      showAdminKeyToast('Enter your admin key.');
+      return;
+    }
+    if (!draft) return;
+    setError('');
+    setMessage('');
+    setLoading(true);
+    try {
+      await axios.put(
+        `${API_BASE}/admin/config`,
+        {
+          ...draft,
+          scheduled_reveal_at: '',
+          scheduled_reveal_auto: false,
+          scheduled_reveal_gender: '',
+        },
+        { headers: adminHeaders(adminKey.trim()) },
+      );
+      const r = await axios.get(`${API_BASE}/config`);
+      setDraft((d) => ({
+        ...d,
+        ...r.data,
+        scheduled_reveal_at: '',
+        scheduled_reveal_auto: false,
+        scheduled_reveal_gender: '',
+      }));
+      setMessage('Scheduled time cleared.');
+    } catch (err) {
+      if (err.response?.status === 401) showAdminKeyToast('Invalid admin key.');
+      else setError('Could not clear schedule.');
     } finally {
       setLoading(false);
     }
@@ -743,6 +818,73 @@ export default function AdminSetupPage() {
 
       {tab === 'reveal' && (
         <section className="admin-panel">
+          <h3>Scheduled reveal (optional)</h3>
+          <p className="hint">
+            On <strong>/results</strong>, guests see a live countdown until this moment. The picker uses your
+            browser&apos;s timezone. You can also let the server reveal automatically at that time (no need to
+            click Reveal below).
+          </p>
+          <div className="form-group admin-checkbox-row">
+            <label>
+              <input
+                type="checkbox"
+                checked={!!draft.scheduled_reveal_auto}
+                onChange={(e) => setField('scheduled_reveal_auto', e.target.checked)}
+              />{' '}
+              Automatically reveal at this time
+            </label>
+          </div>
+          {draft.scheduled_reveal_auto ? (
+            <div className="form-group">
+              <span className="admin-label">Auto-reveal gender</span>
+              <div className="gender-options">
+                <button
+                  type="button"
+                  className={`gender-btn ${(draft.scheduled_reveal_gender || '') === 'girl' ? 'selected' : ''}`}
+                  onClick={() => setField('scheduled_reveal_gender', 'girl')}
+                >
+                  Girl
+                </button>
+                <button
+                  type="button"
+                  className={`gender-btn ${(draft.scheduled_reveal_gender || '') === 'boy' ? 'selected' : ''}`}
+                  onClick={() => setField('scheduled_reveal_gender', 'boy')}
+                >
+                  Boy
+                </button>
+              </div>
+              <p className="hint">Stored only on the server — never shown to guests until reveal.</p>
+            </div>
+          ) : null}
+          <div className="form-group">
+            <label htmlFor="scheduledRevealAt">Date &amp; time</label>
+            <input
+              id="scheduledRevealAt"
+              type="datetime-local"
+              value={isoToDatetimeLocal(draft.scheduled_reveal_at ?? '')}
+              onChange={(e) => setField('scheduled_reveal_at', datetimeLocalToIso(e.target.value))}
+            />
+          </div>
+          <div className="form-group">
+            <label htmlFor="scheduledRevealHeading">Countdown heading</label>
+            <input
+              id="scheduledRevealHeading"
+              value={draft.scheduled_reveal_heading ?? ''}
+              onChange={(e) => setField('scheduled_reveal_heading', e.target.value)}
+              placeholder={SETUP_DEFAULTS.scheduled_reveal_heading}
+            />
+          </div>
+          <div className="admin-schedule-actions">
+            <button type="button" className="submit-btn" onClick={saveConfig} disabled={loading}>
+              Save schedule
+            </button>
+            <button type="button" className="reset-btn" onClick={clearScheduledReveal} disabled={loading}>
+              Clear scheduled time
+            </button>
+          </div>
+
+          <hr className="admin-divider" />
+
           <h3>Reveal</h3>
           <form onSubmit={doReveal} className="reveal-mini-form">
             <div className="gender-options">

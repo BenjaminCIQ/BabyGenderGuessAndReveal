@@ -20,6 +20,10 @@ export const SETUP_DEFAULTS = {
   header_start: '#89CFF0',
   header_end: '#FFB6C1',
   hero_image_url: '',
+  scheduled_reveal_at: '',
+  scheduled_reveal_heading: 'Reveal countdown',
+  scheduled_reveal_auto: false,
+  scheduled_reveal_gender: '',
 };
 
 /** Resolved value for preview (draft wins when non-empty string). */
