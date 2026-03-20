@@ -259,6 +259,60 @@ export default function AdminSetupPage() {
     }
   };
 
+  const uploadRevealAudio = async (e) => {
+    const file = e.target.files?.[0];
+    if (!file || !adminKey.trim()) {
+      showAdminKeyToast('Choose a file and enter your admin key first.');
+      return;
+    }
+    setError('');
+    setLoading(true);
+    try {
+      const fd = new FormData();
+      fd.append('file', file);
+      const res = await axios.post(`${API_BASE}/admin/upload`, fd, {
+        headers: adminHeaders(adminKey.trim()),
+      });
+      const url = res.data?.url;
+      if (url) {
+        setDraft((d) => ({ ...d, reveal_audio_url: url }));
+        setMessage('Audio uploaded — click Save audio settings to persist.');
+      }
+    } catch (err) {
+      if (err.response?.status === 401) showAdminKeyToast('Invalid admin key.');
+      else setError(err.response?.data?.error || 'Upload failed.');
+    } finally {
+      setLoading(false);
+      e.target.value = '';
+    }
+  };
+
+  const clearRevealAudio = async () => {
+    if (!adminKey.trim()) {
+      showAdminKeyToast('Enter your admin key.');
+      return;
+    }
+    if (!draft) return;
+    setError('');
+    setMessage('');
+    setLoading(true);
+    try {
+      await axios.put(
+        `${API_BASE}/admin/config`,
+        { ...draft, reveal_audio_url: '' },
+        { headers: adminHeaders(adminKey.trim()) },
+      );
+      const r = await axios.get(`${API_BASE}/config`);
+      setDraft((d) => ({ ...d, ...r.data, reveal_audio_url: '' }));
+      setMessage('Reveal audio cleared.');
+    } catch (err) {
+      if (err.response?.status === 401) showAdminKeyToast('Invalid admin key.');
+      else setError('Could not clear audio.');
+    } finally {
+      setLoading(false);
+    }
+  };
+
   const fetchVotes = useCallback(async () => {
     if (!adminKey.trim()) {
       showAdminKeyToast('Enter your admin key to load votes.');
@@ -791,7 +845,7 @@ export default function AdminSetupPage() {
           <SetupPreview draft={draft} />
           <h3 className="admin-section-title">Hero photo</h3>
           <p className="hint">
-            Optional image above the question on the vote page. PNG, JPG, GIF, or WebP (max 5 MB).
+            Optional image above the question on the vote page. PNG, JPG, GIF, or WebP (max 20 MB).
           </p>
           <div className="form-group">
             <label>Upload</label>
@@ -907,6 +961,54 @@ export default function AdminSetupPage() {
               Reveal gender
             </button>
           </form>
+
+          <h3>Celebration audio (optional)</h3>
+          <p className="hint">
+            Plays on <strong>/results</strong> when the gender is revealed. Many browsers block autoplay until
+            the visitor interacts — a play button appears if needed. MP3, M4A, WAV, OGG, FLAC, AAC, WebM (upload
+            max ~20 MB).
+          </p>
+          <div className="form-group">
+            <label>Upload</label>
+            <input
+              type="file"
+              accept="audio/*,.mp3,.m4a,.wav,.ogg,.aac,.flac,.webm"
+              onChange={uploadRevealAudio}
+            />
+          </div>
+          <div className="form-group">
+            <label htmlFor="revealAudioUrl">Or paste audio URL</label>
+            <input
+              id="revealAudioUrl"
+              value={draft.reveal_audio_url ?? ''}
+              onChange={(e) => setField('reveal_audio_url', e.target.value)}
+              placeholder="e.g. /uploads/...."
+            />
+          </div>
+          <div className="form-group">
+            <label htmlFor="revealAudioBtnLabel">Play button label (if autoplay is blocked)</label>
+            <input
+              id="revealAudioBtnLabel"
+              value={draft.reveal_audio_button_label ?? ''}
+              onChange={(e) => setField('reveal_audio_button_label', e.target.value)}
+              placeholder={SETUP_DEFAULTS.reveal_audio_button_label}
+            />
+          </div>
+          {draft.reveal_audio_url ? (
+            <div className="form-group">
+              <span className="admin-label">Preview</span>
+              <audio controls src={draft.reveal_audio_url} className="reveal-audio-preview-el" />
+            </div>
+          ) : null}
+          <div className="admin-schedule-actions">
+            <button type="button" className="submit-btn" onClick={saveConfig} disabled={loading}>
+              Save audio settings
+            </button>
+            <button type="button" className="reset-btn" onClick={clearRevealAudio} disabled={loading}>
+              Clear audio
+            </button>
+          </div>
+
           <h3>Reset</h3>
           <p className="hint">Clears every vote and the reveal state.</p>
           <button type="button" className="reset-btn" onClick={doReset} disabled={loading}>

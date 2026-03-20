@@ -16,7 +16,7 @@
 
 - **Vote** (`/`) — Guest page: optional name, boy/girl guess. Custom copy, colours, and hero photo come from the setup screen.
 - **Results** (`/results`) — Live chart before reveal; optional **scheduled reveal countdown** (set in setup). You can enable **auto-reveal** so the server applies the gender at the scheduled time (no manual “Reveal” click). The server checks the schedule when **results are polled** or **someone votes**—keep the results page open or expect traffic near go-time. After reveal, big announcement + correct/incorrect name lists. Guests can **save a PNG** of the reveal card and download **JSON** or **CSV** summaries.
-- **Setup** (`/setup/<slug>`) — Host-only hub (see below): text, colours, photo upload, optional **guest password** for `/` and `/results`, reveal, reset, view/delete votes. **`ADMIN_KEY`** required for every action that changes data.
+- **Setup** (`/setup/<slug>`) — Host-only hub (see below): text, colours, photo upload, optional **celebration audio** for the results reveal, optional **guest password** for `/` and `/results`, reveal, reset, view/delete votes. **`ADMIN_KEY`** required for every action that changes data.
 - **Guest password** (optional) — If enabled in **Guest access**, visitors hitting `/` or `/results` see a password screen first. The **`/setup/...`** URL is **not** gated so hosts can always configure the party. Password is stored hashed; set **`SECRET_KEY`** in `backend/.env` so guest session cookies are signed consistently (especially in production).
 
 ## Screenshots

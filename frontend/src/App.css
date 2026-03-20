@@ -225,6 +225,34 @@ body {
     line-height: 1.45;
     color: #555;
   }
+
+  .reveal-audio-toolbar {
+    margin: 0 auto 1rem;
+    max-width: 520px;
+    text-align: center;
+  }
+
+  .reveal-audio-toolbar audio.reveal-audio-hidden {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    padding: 0;
+    margin: -1px;
+    overflow: hidden;
+    clip: rect(0, 0, 0, 0);
+    white-space: nowrap;
+    border: 0;
+  }
+
+  .reveal-audio-play-btn {
+    margin-bottom: 0;
+  }
+
+  .reveal-audio-preview-el {
+    width: 100%;
+    max-width: 420px;
+    margin-top: 6px;
+  }
   
   .big-reveal {
     padding: 40px;

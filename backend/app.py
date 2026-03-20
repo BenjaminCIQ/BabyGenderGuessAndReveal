@@ -16,12 +16,25 @@ BACKEND_DIR = os.path.dirname(os.path.abspath(__file__))
 REPO_ROOT = os.path.normpath(os.path.join(BACKEND_DIR, '..'))
 REACT_BUILD = os.path.join(REPO_ROOT, 'frontend', 'build')
 UPLOAD_FOLDER = os.path.join(BACKEND_DIR, 'uploads')
-ALLOWED_UPLOAD_EXTENSIONS = {'png', 'jpg', 'jpeg', 'gif', 'webp'}
+ALLOWED_UPLOAD_EXTENSIONS = {
+    'png',
+    'jpg',
+    'jpeg',
+    'gif',
+    'webp',
+    'mp3',
+    'm4a',
+    'aac',
+    'wav',
+    'ogg',
+    'flac',
+    'webm',
+}
 SITE_GATE_COOKIE = 'site_gate'
 SITE_GATE_MAX_AGE = 60 * 60 * 24 * 30
 
 app = Flask(__name__, static_folder=REACT_BUILD, static_url_path='/')
-app.config['MAX_CONTENT_LENGTH'] = 5 * 1024 * 1024
+app.config['MAX_CONTENT_LENGTH'] = 20 * 1024 * 1024
 app.secret_key = os.environ.get('SECRET_KEY', 'dev-only-set-SECRET_KEY-in-production')
 CORS(app, allow_headers=['Content-Type', 'X-Admin-Key'])
 
@@ -55,6 +68,8 @@ DEFAULT_CONFIG = {
     'scheduled_reveal_heading': 'Reveal countdown',
     'scheduled_reveal_auto': False,
     'scheduled_reveal_gender': '',
+    'reveal_audio_url': '',
+    'reveal_audio_button_label': 'Play celebration music',
 }
 
 # Never expose the scheduled gender via public /api/config (would leak the answer).
@@ -331,7 +346,11 @@ def admin_upload():
     if not f or not f.filename:
         return jsonify({'error': 'No file'}), 400
     if not _allowed_file(f.filename):
-        return jsonify({'error': 'Allowed: png, jpg, jpeg, gif, webp'}), 400
+        return jsonify(
+            {
+                'error': 'Allowed: images (png, jpg, gif, webp) or audio (mp3, m4a, wav, ogg, aac, flac, webm)',
+            },
+        ), 400
     os.makedirs(UPLOAD_FOLDER, exist_ok=True)
     ext = f.filename.rsplit('.', 1)[1].lower()
     name = f'{uuid.uuid4().hex}.{ext}'

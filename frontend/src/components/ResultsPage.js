@@ -66,6 +66,9 @@ function ResultsPage() {
   const [confetti, setConfetti] = useState([]);
   const [exporting, setExporting] = useState(false);
   const revealExportRef = useRef(null);
+  const revealAudioRef = useRef(null);
+  const revealAudioAutoplayTriedRef = useRef(false);
+  const [revealAudioNeedsTap, setRevealAudioNeedsTap] = useState(false);
 
   const c = useMemo(() => config || {}, [config]);
   const primary = c.primary_color || '#89CFF0';
@@ -128,6 +131,30 @@ function ResultsPage() {
     return () => clearInterval(interval);
   }, [confetti]);
 
+  useEffect(() => {
+    if (!results?.revealed || !c.reveal_audio_url?.trim()) {
+      if (!results?.revealed) {
+        revealAudioAutoplayTriedRef.current = false;
+      }
+      setRevealAudioNeedsTap(false);
+      return;
+    }
+    const el = revealAudioRef.current;
+    if (!el) return;
+    if (revealAudioAutoplayTriedRef.current) return;
+    revealAudioAutoplayTriedRef.current = true;
+    el.volume = 0.85;
+    const play = el.play();
+    if (play !== undefined) {
+      play
+        .then(() => setRevealAudioNeedsTap(false))
+        .catch(() => {
+          revealAudioAutoplayTriedRef.current = false;
+          setRevealAudioNeedsTap(true);
+        });
+    }
+  }, [results?.revealed, c.reveal_audio_url]);
+
   const saveRevealImage = useCallback(async () => {
     const node = revealExportRef.current;
     if (!node) return;
@@ -189,6 +216,30 @@ function ResultsPage() {
     <div className="results-container">
       {results.revealed ? (
         <div className="reveal-results">
+          {c.reveal_audio_url?.trim() ? (
+            <div className="reveal-audio-toolbar">
+              <audio
+                ref={revealAudioRef}
+                className="reveal-audio-hidden"
+                src={c.reveal_audio_url.trim()}
+                preload="auto"
+              />
+              {revealAudioNeedsTap ? (
+                <button
+                  type="button"
+                  className="reveal-audio-play-btn export-btn export-btn-primary"
+                  onClick={() => {
+                    revealAudioRef.current
+                      ?.play()
+                      .then(() => setRevealAudioNeedsTap(false))
+                      .catch(() => {});
+                  }}
+                >
+                  {c.reveal_audio_button_label || 'Play celebration music'}
+                </button>
+              ) : null}
+            </div>
+          ) : null}
           <div ref={revealExportRef} className="reveal-export-snapshot">
             {c.title ? <p className="memory-event-title">{c.title}</p> : null}
             {c.subtitle ? <p className="memory-event-subtitle">{c.subtitle}</p> : null}

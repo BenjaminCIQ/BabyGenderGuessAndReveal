@@ -24,6 +24,8 @@ export const SETUP_DEFAULTS = {
   scheduled_reveal_heading: 'Reveal countdown',
   scheduled_reveal_auto: false,
   scheduled_reveal_gender: '',
+  reveal_audio_url: '',
+  reveal_audio_button_label: 'Play celebration music',
 };
 
 /** Resolved value for preview (draft wins when non-empty string). */
